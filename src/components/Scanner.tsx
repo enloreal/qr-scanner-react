@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import QrScanner from './QrScanner'
+import QrScanner, { type QrScannerLayoutParts, type QrScannerRenderApi } from './QrScanner'
 import { createZxingAdapter } from '../zxingAdapter'
 import { createMockScannerAdapter } from '../mockScannerAdapter'
 
@@ -16,6 +16,81 @@ function Scanner() {
 
     return createZxingAdapter()
   }, [])
+
+  const renderControls = (api: QrScannerRenderApi) => (
+    <div className="controls">
+      <button
+        type="button"
+        className="controls-button btn-primary"
+        onClick={() => void api.start()}
+        disabled={api.isRunning}
+      >
+        {api.labels.startButton}
+      </button>
+
+      <button
+        type="button"
+        className="controls-button btn-secondary"
+        onClick={api.stop}
+        disabled={!api.isRunning}
+      >
+        {api.labels.stopButton}
+      </button>
+
+      <button
+        type="button"
+        className="controls-button btn-primary"
+        onClick={api.openFileDialog}
+      >
+        {api.labels.uploadButton}
+      </button>
+
+      {api.renderFileInput()}
+    </div>
+  )
+
+  const renderResult = (api: QrScannerRenderApi) => (
+    <div className="result">
+      <div className="result__title">
+        <strong>{api.labels.base64Title}</strong>
+        <button
+          type="button"
+          className={`result-button controls-button btn-primary ${api.rawCopied ? 'is-copied' : ''}`}
+          onClick={() => void api.copyRaw()}
+          disabled={!api.hasResult}
+        >
+          {api.rawCopied ? api.labels.copiedButton : api.labels.copyButton}
+        </button>
+      </div>
+      <p id="raw-result">{api.resultBase64}</p>
+
+      <div className="result__title">
+        <strong>{api.labels.resultTitle}</strong>
+        <button
+          type="button"
+          className={`result-button controls-button btn-primary ${api.resultCopied ? 'is-copied' : ''}`}
+          onClick={() => void api.copyResult()}
+          disabled={!api.hasResult}
+        >
+          {api.resultCopied ? api.labels.copiedButton : api.labels.copyButton}
+        </button>
+      </div>
+      <p id="result">{api.resultText}</p>
+    </div>
+  )
+
+  const renderLayout = (parts: QrScannerLayoutParts) => (
+    <main className="main-wrap">
+      <div className="content">
+        {parts.title}
+        {parts.stage}
+      </div>
+
+      {parts.controls}
+      {parts.error}
+      {parts.result}
+    </main>
+  )
 
   return (
     <>
@@ -55,6 +130,9 @@ function Scanner() {
         scannerAdapter={scannerAdapter}
         autoStart={false}
         allowFileUpload
+        renderControls={renderControls}
+        renderResult={renderResult}
+        renderLayout={renderLayout}
         onResult={({ text }) => {
           console.log('Считан код:', text)
         }}
@@ -67,4 +145,3 @@ function Scanner() {
 }
 
 export default Scanner
-

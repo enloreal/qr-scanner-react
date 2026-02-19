@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { EMPTY_RESULT, useScanner } from '../hooks/useScanner'
 import type { ScannerAdapter } from '../types'
 
@@ -13,6 +13,32 @@ export type QrScannerLabels = {
   copiedButton: string
 }
 
+export type QrScannerRenderApi = {
+  labels: QrScannerLabels
+  isRunning: boolean
+  hasResult: boolean
+  resultText: string
+  resultBase64: string
+  error: string | null
+  rawCopied: boolean
+  resultCopied: boolean
+  start: () => Promise<void>
+  stop: () => void
+  clear: () => void
+  openFileDialog: () => void
+  copyRaw: () => Promise<void>
+  copyResult: () => Promise<void>
+  renderFileInput: () => ReactNode
+}
+
+export type QrScannerLayoutParts = {
+  title: ReactNode
+  stage: ReactNode
+  controls: ReactNode
+  result: ReactNode
+  error: ReactNode
+}
+
 export type QrScannerProps = {
   labels?: Partial<QrScannerLabels>
   onResult?: (payload: { text: string; base64: string }) => void
@@ -20,6 +46,9 @@ export type QrScannerProps = {
   autoStart?: boolean
   allowFileUpload?: boolean
   scannerAdapter?: ScannerAdapter
+  renderControls?: (api: QrScannerRenderApi) => ReactNode
+  renderResult?: (api: QrScannerRenderApi) => ReactNode
+  renderLayout?: (parts: QrScannerLayoutParts, api: QrScannerRenderApi) => ReactNode
 }
 
 const DEFAULT_LABELS: QrScannerLabels = {
@@ -40,6 +69,9 @@ function QrScanner({
   autoStart = false,
   allowFileUpload = true,
   scannerAdapter,
+  renderControls,
+  renderResult,
+  renderLayout,
 }: QrScannerProps) {
   const mergedLabels = { ...DEFAULT_LABELS, ...labels }
 
@@ -90,6 +122,12 @@ function QrScanner({
     setResultCopied(false)
   }
 
+  const handleClear = () => {
+    resetResult()
+    setRawCopied(false)
+    setResultCopied(false)
+  }
+
   const handleOpenFileDialog = () => {
     fileInputRef.current?.click()
   }
@@ -119,86 +157,127 @@ function QrScanner({
 
   const hasResult = resultText !== EMPTY_RESULT
 
+  const renderFileInput = () => (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      className="controls__file-input"
+      onChange={handleFileChange}
+    />
+  )
+
+  const renderApi: QrScannerRenderApi = {
+    labels: mergedLabels,
+    isRunning,
+    hasResult,
+    resultText,
+    resultBase64,
+    error,
+    rawCopied,
+    resultCopied,
+    start: handleStart,
+    stop: handleStop,
+    clear: handleClear,
+    openFileDialog: handleOpenFileDialog,
+    copyRaw: handleCopyRaw,
+    copyResult: handleCopyResult,
+    renderFileInput,
+  }
+
+  const defaultControlsNode = (
+    <div className="controls">
+      <button
+        type="button"
+        className="controls-button btn-primary"
+        onClick={handleStart}
+        disabled={isRunning}
+      >
+        {mergedLabels.startButton}
+      </button>
+
+      <button
+        type="button"
+        className="controls-button btn-secondary"
+        onClick={handleStop}
+        disabled={!isRunning}
+      >
+        {mergedLabels.stopButton}
+      </button>
+
+      {allowFileUpload && (
+        <>
+          <button
+            type="button"
+            className="controls-button btn-primary"
+            onClick={handleOpenFileDialog}
+          >
+            {mergedLabels.uploadButton}
+          </button>
+
+          {renderFileInput()}
+        </>
+      )}
+    </div>
+  )
+
+  const defaultResultNode = (
+    <div className="result">
+      <div className="result__title">
+        <strong>{mergedLabels.base64Title}</strong>
+        <button
+          type="button"
+          className={`result-button controls-button btn-primary ${rawCopied ? 'is-copied' : ''}`}
+          onClick={handleCopyRaw}
+          disabled={!hasResult}
+        >
+          {rawCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
+        </button>
+      </div>
+      <p id="raw-result">{resultBase64}</p>
+
+      <div className="result__title">
+        <strong>{mergedLabels.resultTitle}</strong>
+        <button
+          type="button"
+          className={`result-button controls-button btn-primary ${resultCopied ? 'is-copied' : ''}`}
+          onClick={handleCopyResult}
+          disabled={!hasResult}
+        >
+          {resultCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
+        </button>
+      </div>
+      <p id="result">{resultText}</p>
+    </div>
+  )
+
+  const titleNode = <h2>{mergedLabels.title}</h2>
+
+  const stageNode = (
+    <div className="stage">
+      <video ref={videoRef} className="stage__video" playsInline muted />
+      <div className="stage__overlay" />
+    </div>
+  )
+
+  const controlsNode = renderControls ? renderControls(renderApi) : defaultControlsNode
+  const resultNode = renderResult ? renderResult(renderApi) : defaultResultNode
+  const errorNode = error ? <p className="scanner-error">{error}</p> : null
+
+  if (renderLayout) {
+    return <>{renderLayout({ title: titleNode, stage: stageNode, controls: controlsNode, result: resultNode, error: errorNode }, renderApi)}</>
+  }
+
   return (
     <main className="main-wrap">
       <div className="content">
-        <h2>{mergedLabels.title}</h2>
-
-        <div className="stage">
-          <video ref={videoRef} className="stage__video" playsInline muted />
-          <div className="stage__overlay" />
-        </div>
+        {titleNode}
+        {stageNode}
       </div>
 
-      <div className="controls">
-        <button
-          type="button"
-          className="controls-button btn-primary"
-          onClick={handleStart}
-          disabled={isRunning}
-        >
-          {mergedLabels.startButton}
-        </button>
-
-        <button
-          type="button"
-          className="controls-button btn-secondary"
-          onClick={handleStop}
-          disabled={!isRunning}
-        >
-          {mergedLabels.stopButton}
-        </button>
-
-        {allowFileUpload && (
-          <>
-            <button
-              type="button"
-              className="controls-button btn-primary"
-              onClick={handleOpenFileDialog}
-            >
-              {mergedLabels.uploadButton}
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="controls__file-input"
-              onChange={handleFileChange}
-            />
-          </>
-        )}
-      </div>
-
-      {error && <p className="scanner-error">{error}</p>}
-
-      <div className="result">
-        <div className="result__title">
-          <strong>{mergedLabels.base64Title}</strong>
-          <button
-            type="button"
-            className={`result-button controls-button btn-primary ${rawCopied ? 'is-copied' : ''}`}
-            onClick={handleCopyRaw}
-            disabled={!hasResult}
-          >
-            {rawCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
-          </button>
-        </div>
-        <p id="raw-result">{resultBase64}</p>
-
-        <div className="result__title">
-          <strong>{mergedLabels.resultTitle}</strong>
-          <button
-            type="button"
-            className={`result-button controls-button btn-primary ${resultCopied ? 'is-copied' : ''}`}
-            onClick={handleCopyResult}
-            disabled={!hasResult}
-          >
-            {resultCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
-          </button>
-        </div>
-        <p id="result">{resultText}</p>
-      </div>
+      {controlsNode}
+      {errorNode}
+      {resultNode}
     </main>
   )
 }
