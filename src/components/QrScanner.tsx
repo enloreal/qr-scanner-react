@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { EMPTY_RESULT, useScanner } from '../hooks/useScanner'
+import type { ScannerAdapter } from '../types'
 
 export type QrScannerLabels = {
   title: string
@@ -18,6 +19,7 @@ export type QrScannerProps = {
   onError?: (message: string) => void
   autoStart?: boolean
   allowFileUpload?: boolean
+  scannerAdapter?: ScannerAdapter
 }
 
 const DEFAULT_LABELS: QrScannerLabels = {
@@ -37,6 +39,7 @@ function QrScanner({
   onError,
   autoStart = false,
   allowFileUpload = true,
+  scannerAdapter,
 }: QrScannerProps) {
   const mergedLabels = { ...DEFAULT_LABELS, ...labels }
 
@@ -55,7 +58,7 @@ function QrScanner({
     scanFromFile,
     copyText,
     resetResult,
-  } = useScanner()
+  } = useScanner({ adapter: scannerAdapter })
 
   useEffect(() => {
     if (!autoStart) return

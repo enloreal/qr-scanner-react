@@ -1,73 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { createZxingAdapter } from '../zxingAdapter'
+import { EMPTY_RESULT, type ScanResult, type ScannerAdapter } from '../types'
 
-export const EMPTY_RESULT = '—'
-
-const toBase64 = (value: string): string => {
-  const bytes = new TextEncoder().encode(value)
-  let binary = ''
-
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
-  }
-
-  return btoa(binary)
-}
+export { EMPTY_RESULT } from '../types'
 
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : 'Неизвестная ошибка'
 }
 
-const loadImage = (file: File): Promise<HTMLImageElement> => {
-  const url = URL.createObjectURL(file)
-
-  return new Promise((resolve, reject) => {
-    const image = new Image()
-
-    image.onload = () => {
-      URL.revokeObjectURL(url)
-      resolve(image)
-    }
-
-    image.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('Не удалось загрузить изображение'))
-    }
-
-    image.src = url
-  })
+type UseScannerOptions = {
+  adapter?: ScannerAdapter
 }
 
-export function useScanner() {
+export function useScanner(options?: UseScannerOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null)
-  const controlsRef = useRef<IScannerControls | null>(null)
+
+  const adapterRef = useRef<ScannerAdapter | null>(null)
+  if (!adapterRef.current) {
+    adapterRef.current = options?.adapter ?? createZxingAdapter()
+  }
+  const adapter = adapterRef.current
 
   const [isRunning, setIsRunning] = useState(false)
   const [resultText, setResultText] = useState(EMPTY_RESULT)
   const [resultBase64, setResultBase64] = useState(EMPTY_RESULT)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    readerRef.current = new BrowserMultiFormatReader()
+  const setResult = useCallback((result: ScanResult) => {
+    const text = result.text.trim()
+    const base64 = result.base64.trim()
 
-    return () => {
-      controlsRef.current?.stop()
-      controlsRef.current = null
-    }
-  }, [])
-
-  const setResult = useCallback((text: string) => {
-    const normalized = text.trim()
-
-    if (!normalized) {
+    if (!text) {
       setResultText(EMPTY_RESULT)
       setResultBase64(EMPTY_RESULT)
       return
     }
 
-    setResultText(normalized)
-    setResultBase64(toBase64(normalized))
+    setResultText(text)
+    setResultBase64(base64 || EMPTY_RESULT)
     setError(null)
   }, [])
 
@@ -78,58 +48,40 @@ export function useScanner() {
 
   const start = useCallback(async () => {
     const video = videoRef.current
-    const reader = readerRef.current
 
-    if (!video || !reader) {
-      setError('Видеоэлемент или сканер не инициализирован')
+    if (!video) {
+      setError('Видеоэлемент не инициализирован')
       return
     }
 
     try {
       setError(null)
-
-      controlsRef.current?.stop()
-      controlsRef.current = null
-
-      const controls = await reader.decodeFromVideoDevice(undefined, video, (result) => {
-        if (result) {
-          setResult(result.getText())
-        }
-      })
-
-      controlsRef.current = controls
+      await adapter.start(video, setResult)
       setIsRunning(true)
     } catch (err) {
       setIsRunning(false)
       setError(`Ошибка камеры: ${getErrorMessage(err)}`)
     }
-  }, [setResult])
+  }, [adapter, setResult])
 
   const stop = useCallback(() => {
-    controlsRef.current?.stop()
-    controlsRef.current = null
+    adapter.stop()
     setIsRunning(false)
     setError(null)
-  }, [])
+  }, [adapter])
 
-  const scanFromFile = useCallback(async (file: File) => {
-    const reader = readerRef.current
-
-    if (!reader) {
-      setError('Сканер не инициализирован')
-      return
-    }
-
-    try {
-      setError(null)
-
-      const image = await loadImage(file)
-      const result = await reader.decodeFromImageElement(image)
-      setResult(result.getText())
-    } catch (err) {
-      setError(`Ошибка файла: ${getErrorMessage(err)}`)
-    }
-  }, [setResult])
+  const scanFromFile = useCallback(
+    async (file: File) => {
+      try {
+        setError(null)
+        const result = await adapter.scanFromFile(file)
+        setResult(result)
+      } catch (err) {
+        setError(`Ошибка файла: ${getErrorMessage(err)}`)
+      }
+    },
+    [adapter, setResult],
+  )
 
   const copyText = useCallback(async (text: string): Promise<boolean> => {
     const normalized = text.trim()
@@ -146,6 +98,12 @@ export function useScanner() {
       return false
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      adapter.stop()
+    }
+  }, [adapter])
 
   return {
     videoRef,

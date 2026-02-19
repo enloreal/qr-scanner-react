@@ -1,6 +1,22 @@
+import { useMemo } from 'react'
 import QrScanner from './QrScanner'
+import { createZxingAdapter } from '../zxingAdapter'
+import { createMockScannerAdapter } from '../mockScannerAdapter'
+
+const USE_MOCK = true // true -> mock; false -> real camera
 
 function Scanner() {
+  const scannerAdapter = useMemo(() => {
+    if (USE_MOCK) {
+      return createMockScannerAdapter({
+        resultText: 'TEST-QR-FROM-MOCK',
+        intervalMs: 4000,
+      })
+    }
+
+    return createZxingAdapter()
+  }, [])
+
   return (
     <>
       <header className="header-wrapper">
@@ -36,6 +52,7 @@ function Scanner() {
       </header>
 
       <QrScanner
+        scannerAdapter={scannerAdapter}
         autoStart={false}
         allowFileUpload
         onResult={({ text }) => {
@@ -50,3 +67,4 @@ function Scanner() {
 }
 
 export default Scanner
+
