@@ -1,5 +1,13 @@
 # React + TypeScript + Vite
 
+## Scanner Mode
+
+Mock mode is configured via env variable:
+
+1. Copy `.env.example` to `.env.local`
+2. Set `VITE_USE_MOCK=true` for mock adapter
+3. Set `VITE_USE_MOCK=false` for real camera (ZXing)
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

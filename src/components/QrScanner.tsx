@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import { EMPTY_RESULT, useScanner } from '../hooks/useScanner'
 import type { ScannerAdapter } from '../types'
 
@@ -75,9 +83,17 @@ function QrScanner({
 }: QrScannerProps) {
   const mergedLabels = { ...DEFAULT_LABELS, ...labels }
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputId = useId()
   const [rawCopied, setRawCopied] = useState(false)
   const [resultCopied, setResultCopied] = useState(false)
+  const [rawCopiedTimeoutId, setRawCopiedTimeoutId] = useState<number | null>(null)
+  const [resultCopiedTimeoutId, setResultCopiedTimeoutId] = useState<number | null>(null)
+
+  const clearCopyTimeout = (timeoutId: number | null) => {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId)
+    }
+  }
 
   const {
     videoRef,
@@ -111,6 +127,26 @@ function QrScanner({
     onError(error)
   }, [onError, error])
 
+  useEffect(() => {
+    return () => {
+      clearCopyTimeout(rawCopiedTimeoutId)
+      clearCopyTimeout(resultCopiedTimeoutId)
+    }
+  }, [rawCopiedTimeoutId, resultCopiedTimeoutId])
+
+  const resetCopiedState = () => {
+    setRawCopied(false)
+    setResultCopied(false)
+    setRawCopiedTimeoutId((previousId) => {
+      clearCopyTimeout(previousId)
+      return null
+    })
+    setResultCopiedTimeoutId((previousId) => {
+      clearCopyTimeout(previousId)
+      return null
+    })
+  }
+
   const handleStart = async () => {
     await start()
   }
@@ -118,18 +154,19 @@ function QrScanner({
   const handleStop = () => {
     stop()
     resetResult()
-    setRawCopied(false)
-    setResultCopied(false)
+    resetCopiedState()
   }
 
   const handleClear = () => {
     resetResult()
-    setRawCopied(false)
-    setResultCopied(false)
+    resetCopiedState()
   }
 
   const handleOpenFileDialog = () => {
-    fileInputRef.current?.click()
+    const input = document.getElementById(fileInputId)
+    if (input instanceof HTMLInputElement) {
+      input.click()
+    }
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -140,26 +177,35 @@ function QrScanner({
     event.target.value = ''
   }
 
-  const markCopied = (setter: (value: boolean) => void) => {
+  const markCopied = (
+    setter: (value: boolean) => void,
+    setTimeoutId: Dispatch<SetStateAction<number | null>>,
+  ) => {
     setter(true)
-    window.setTimeout(() => setter(false), 2000)
+    setTimeoutId((previousId) => {
+      clearCopyTimeout(previousId)
+      return window.setTimeout(() => {
+        setter(false)
+        setTimeoutId(null)
+      }, 2000)
+    })
   }
 
   const handleCopyRaw = async () => {
     const ok = await copyText(resultBase64)
-    if (ok) markCopied(setRawCopied)
+    if (ok) markCopied(setRawCopied, setRawCopiedTimeoutId)
   }
 
   const handleCopyResult = async () => {
     const ok = await copyText(resultText)
-    if (ok) markCopied(setResultCopied)
+    if (ok) markCopied(setResultCopied, setResultCopiedTimeoutId)
   }
 
   const hasResult = resultText !== EMPTY_RESULT
 
   const renderFileInput = () => (
     <input
-      ref={fileInputRef}
+      id={fileInputId}
       type="file"
       accept="image/*"
       className="controls__file-input"
@@ -234,7 +280,7 @@ function QrScanner({
           {rawCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
         </button>
       </div>
-      <p id="raw-result">{resultBase64}</p>
+      <p className="result__raw">{resultBase64}</p>
 
       <div className="result__title">
         <strong>{mergedLabels.resultTitle}</strong>
@@ -247,7 +293,7 @@ function QrScanner({
           {resultCopied ? mergedLabels.copiedButton : mergedLabels.copyButton}
         </button>
       </div>
-      <p id="result">{resultText}</p>
+      <p className="result__text">{resultText}</p>
     </div>
   )
 
@@ -265,7 +311,14 @@ function QrScanner({
   const errorNode = error ? <p className="scanner-error">{error}</p> : null
 
   if (renderLayout) {
-    return <>{renderLayout({ title: titleNode, stage: stageNode, controls: controlsNode, result: resultNode, error: errorNode }, renderApi)}</>
+    return (
+      <>
+        {renderLayout(
+          { title: titleNode, stage: stageNode, controls: controlsNode, result: resultNode, error: errorNode },
+          renderApi,
+        )}
+      </>
+    )
   }
 
   return (

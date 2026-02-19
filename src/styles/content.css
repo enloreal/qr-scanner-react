@@ -50,13 +50,13 @@
   background: #f7f7f7;
 }
 
-#raw-result {
+.result__raw {
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
-#result {
+.result__text {
   max-height: 120px;
   overflow-y: auto;
   overflow-x: hidden;

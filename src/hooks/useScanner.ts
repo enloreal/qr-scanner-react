@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createZxingAdapter } from '../zxingAdapter'
+import { createLazyZxingAdapter } from '../lazyZxingAdapter'
 import { EMPTY_RESULT, type ScanResult, type ScannerAdapter } from '../types'
 
 export { EMPTY_RESULT } from '../types'
@@ -15,11 +15,9 @@ type UseScannerOptions = {
 export function useScanner(options?: UseScannerOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  const adapterRef = useRef<ScannerAdapter | null>(null)
-  if (!adapterRef.current) {
-    adapterRef.current = options?.adapter ?? createZxingAdapter()
-  }
-  const adapter = adapterRef.current
+  const [adapter] = useState<ScannerAdapter>(
+    () => options?.adapter ?? createLazyZxingAdapter()
+  )
 
   const [isRunning, setIsRunning] = useState(false)
   const [resultText, setResultText] = useState(EMPTY_RESULT)

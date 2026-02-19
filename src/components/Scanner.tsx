@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import QrScanner, { type QrScannerLayoutParts, type QrScannerRenderApi } from './QrScanner'
-import { createZxingAdapter } from '../zxingAdapter'
+import { createLazyZxingAdapter } from '../lazyZxingAdapter'
 import { createMockScannerAdapter } from '../mockScannerAdapter'
 
-const USE_MOCK = true // true -> mock; false -> real camera
+const USE_MOCK = ['1', 'true', 'yes', 'on'].includes(
+  (import.meta.env.VITE_USE_MOCK ?? 'false').toLowerCase(),
+)
 
 function Scanner() {
   const scannerAdapter = useMemo(() => {
@@ -14,7 +16,7 @@ function Scanner() {
       })
     }
 
-    return createZxingAdapter()
+    return createLazyZxingAdapter()
   }, [])
 
   const renderControls = (api: QrScannerRenderApi) => (
@@ -62,7 +64,7 @@ function Scanner() {
           {api.rawCopied ? api.labels.copiedButton : api.labels.copyButton}
         </button>
       </div>
-      <p id="raw-result">{api.resultBase64}</p>
+      <p className="result__raw">{api.resultBase64}</p>
 
       <div className="result__title">
         <strong>{api.labels.resultTitle}</strong>
@@ -75,7 +77,7 @@ function Scanner() {
           {api.resultCopied ? api.labels.copiedButton : api.labels.copyButton}
         </button>
       </div>
-      <p id="result">{api.resultText}</p>
+      <p className="result__text">{api.resultText}</p>
     </div>
   )
 
