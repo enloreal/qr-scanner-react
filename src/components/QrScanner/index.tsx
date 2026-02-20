@@ -159,10 +159,8 @@ function QrScanner({
     start: start,
     stop: handleStop,
     clear: handleClear,
-    openFileDialog: handleOpenFileDialog,
     copyRaw: handleCopyRaw,
     copyResult: handleCopyResult,
-    renderFileInput,
   }
 
   const defaultControlsNode = (

@@ -24,10 +24,8 @@ export type QrScannerRenderApi = {
   start: () => Promise<void>
   stop: () => void
   clear: () => void
-  openFileDialog: () => void
   copyRaw: () => Promise<void>
   copyResult: () => Promise<void>
-  renderFileInput: () => ReactNode
 }
 
 export type QrScannerLayoutParts = {

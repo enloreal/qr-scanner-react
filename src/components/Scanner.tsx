@@ -24,38 +24,6 @@ function Scanner() {
     return createLazyZxingAdapter()
   }, [])
 
-  const renderControls = (api: QrScannerRenderApi) => (
-    <div className="controls">
-      <button
-        type="button"
-        className="controls-button btn-primary"
-        onClick={() => void api.start()}
-        disabled={api.isRunning}
-      >
-        {api.labels.startButton}
-      </button>
-
-      <button
-        type="button"
-        className="controls-button btn-secondary"
-        onClick={api.stop}
-        disabled={!api.isRunning}
-      >
-        {api.labels.stopButton}
-      </button>
-
-      <button
-        type="button"
-        className="controls-button btn-primary"
-        onClick={api.openFileDialog}
-      >
-        {api.labels.uploadButton}
-      </button>
-
-      {api.renderFileInput()}
-    </div>
-  )
-
   const renderResult = (api: QrScannerRenderApi) => (
     <div className="result">
       <div className="result__title">
@@ -145,7 +113,6 @@ function Scanner() {
         scannerAdapter={scannerAdapter}
         autoStart={false}
         allowFileUpload
-        renderControls={renderControls}
         renderResult={renderResult}
         renderLayout={renderLayout}
         onResult={({ text }) => {
