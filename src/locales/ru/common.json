@@ -1,0 +1,12 @@
+{
+  "qrScanner": {
+    "title": "Отсканируйте QR-код",
+    "startButton": "Запустить камеру",
+    "stopButton": "Остановить",
+    "uploadButton": "Сканировать из фото",
+    "base64Title": "Base64 результат:",
+    "resultTitle": "Результат:",
+    "copyButton": "Скопировать",
+    "copiedButton": "Скопировано!"
+  }
+}

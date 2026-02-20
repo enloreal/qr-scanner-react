@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import QrScanner, { type QrScannerLayoutParts, type QrScannerRenderApi } from './QrScanner'
+import { getQrScannerLabels } from './QrScanner.labels'
 import { createLazyZxingAdapter } from '../lazyZxingAdapter'
 import { createMockScannerAdapter } from '../mockScannerAdapter'
 
@@ -8,6 +10,8 @@ const USE_MOCK = ['1', 'true', 'yes', 'on'].includes(
 )
 
 function Scanner() {
+  const { t, i18n } = useTranslation('common')
+  const labels = getQrScannerLabels(t)
   const scannerAdapter = useMemo(() => {
     if (USE_MOCK) {
       return createMockScannerAdapter({
@@ -107,6 +111,7 @@ function Scanner() {
               <button type="button" className="header__profile-notification" aria-label="Уведомления">
                 <img src="/bell.svg" alt="notification-bell" className="header__notification-icon" />
               </button>
+              
 
               <a href="https://my.centrinvest.ru/setting-menu/user" className="header__profile-link">
                 <div className="header__profile-avatar">
@@ -127,8 +132,15 @@ function Scanner() {
           </nav>
         </div>
       </header>
+      
+      {/* ТЕСТ СМЕНЫ ЯЗЫКА */}
+      <div style={{ display: 'flex', gap: 8, padding: '8px 16px' }}>
+        <button type="button" onClick={() => i18n.changeLanguage('ru')}>RU</button>
+        <button type="button" onClick={() => i18n.changeLanguage('en')}>EN</button>
+      </div>
 
       <QrScanner
+        labels={labels}
         scannerAdapter={scannerAdapter}
         autoStart={false}
         allowFileUpload
