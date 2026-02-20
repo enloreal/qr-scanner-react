@@ -1,74 +1,14 @@
 import {
   useEffect,
-  useId,
   useState,
+  useRef,
   type ChangeEvent,
   type Dispatch,
-  type ReactNode,
   type SetStateAction,
 } from 'react'
-import { EMPTY_RESULT, useScanner } from '../hooks/useScanner'
-import type { ScannerAdapter } from '../types'
-
-export type QrScannerLabels = {
-  title: string
-  startButton: string
-  stopButton: string
-  uploadButton: string
-  base64Title: string
-  resultTitle: string
-  copyButton: string
-  copiedButton: string
-}
-
-export type QrScannerRenderApi = {
-  labels: QrScannerLabels
-  isRunning: boolean
-  hasResult: boolean
-  resultText: string
-  resultBase64: string
-  error: string | null
-  rawCopied: boolean
-  resultCopied: boolean
-  start: () => Promise<void>
-  stop: () => void
-  clear: () => void
-  openFileDialog: () => void
-  copyRaw: () => Promise<void>
-  copyResult: () => Promise<void>
-  renderFileInput: () => ReactNode
-}
-
-export type QrScannerLayoutParts = {
-  title: ReactNode
-  stage: ReactNode
-  controls: ReactNode
-  result: ReactNode
-  error: ReactNode
-}
-
-export type QrScannerProps = {
-  labels?: Partial<QrScannerLabels>
-  onResult?: (payload: { text: string; base64: string }) => void
-  onError?: (message: string) => void
-  autoStart?: boolean
-  allowFileUpload?: boolean
-  scannerAdapter?: ScannerAdapter
-  renderControls?: (api: QrScannerRenderApi) => ReactNode
-  renderResult?: (api: QrScannerRenderApi) => ReactNode
-  renderLayout?: (parts: QrScannerLayoutParts, api: QrScannerRenderApi) => ReactNode
-}
-
-const DEFAULT_LABELS: QrScannerLabels = {
-  title: 'Отсканируйте QR-код',
-  startButton: 'Запустить камеру',
-  stopButton: 'Остановить',
-  uploadButton: 'Сканировать из фото',
-  base64Title: 'Base64 результат:',
-  resultTitle: 'Результат:',
-  copyButton: 'Скопировать',
-  copiedButton: 'Скопировано!',
-}
+import { EMPTY_RESULT, useScanner } from '../../hooks/useScanner'
+import { DEFAULT_LABELS } from './labels'
+import type { QrScannerProps, QrScannerRenderApi } from './types'
 
 function QrScanner({
   labels,
@@ -83,11 +23,11 @@ function QrScanner({
 }: QrScannerProps) {
   const mergedLabels = { ...DEFAULT_LABELS, ...labels }
 
-  const fileInputId = useId()
   const [rawCopied, setRawCopied] = useState(false)
   const [resultCopied, setResultCopied] = useState(false)
   const [rawCopiedTimeoutId, setRawCopiedTimeoutId] = useState<number | null>(null)
   const [resultCopiedTimeoutId, setResultCopiedTimeoutId] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const clearCopyTimeout = (timeoutId: number | null) => {
     if (timeoutId !== null) {
@@ -134,6 +74,7 @@ function QrScanner({
     }
   }, [rawCopiedTimeoutId, resultCopiedTimeoutId])
 
+
   const resetCopiedState = () => {
     setRawCopied(false)
     setResultCopied(false)
@@ -145,10 +86,6 @@ function QrScanner({
       clearCopyTimeout(previousId)
       return null
     })
-  }
-
-  const handleStart = async () => {
-    await start()
   }
 
   const handleStop = () => {
@@ -163,10 +100,7 @@ function QrScanner({
   }
 
   const handleOpenFileDialog = () => {
-    const input = document.getElementById(fileInputId)
-    if (input instanceof HTMLInputElement) {
-      input.click()
-    }
+    fileInputRef.current?.click()
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -205,7 +139,7 @@ function QrScanner({
 
   const renderFileInput = () => (
     <input
-      id={fileInputId}
+      ref={fileInputRef}
       type="file"
       accept="image/*"
       className="controls__file-input"
@@ -222,7 +156,7 @@ function QrScanner({
     error,
     rawCopied,
     resultCopied,
-    start: handleStart,
+    start: start,
     stop: handleStop,
     clear: handleClear,
     openFileDialog: handleOpenFileDialog,
@@ -236,7 +170,7 @@ function QrScanner({
       <button
         type="button"
         className="controls-button btn-primary"
-        onClick={handleStart}
+        onClick={() => void start()}
         disabled={isRunning}
       >
         {mergedLabels.startButton}
@@ -334,5 +268,12 @@ function QrScanner({
     </main>
   )
 }
+
+export type {
+  QrScannerLabels,
+  QrScannerLayoutParts,
+  QrScannerProps,
+  QrScannerRenderApi,
+} from './types'
 
 export default QrScanner

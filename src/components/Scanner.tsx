@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import QrScanner, { type QrScannerLayoutParts, type QrScannerRenderApi } from './QrScanner'
-import { getQrScannerLabels } from './QrScanner.labels'
+import QrScanner from './QrScanner'
+import { getQrScannerLabels } from './QrScanner/i18nLabels'
+import type { QrScannerLayoutParts, QrScannerRenderApi } from './QrScanner/types'
 import { createLazyZxingAdapter } from '../lazyZxingAdapter'
 import { createMockScannerAdapter } from '../mockScannerAdapter'
 
